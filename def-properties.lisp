@@ -27,13 +27,13 @@
 
 (in-package :def-properties)
 
-;; TODO: support all aspects from swank::describe-symbol-for-emacs:
+;; TODO: support all aspects from slynk::describe-symbol-for-emacs:
 ;; :VARIABLE :FUNCTION :SETF :SPECIAL-OPERATOR :MACRO :COMPILER-MACRO
 ;; :TYPE :CLASS :ALIEN-TYPE :ALIEN-STRUCT :ALIEN-UNION :ALIEN-ENUM
 
 (defun symbol-kinds (symbol)
   "Return the kinds of the SYMBOL."
-  (remove-if-not 'symbolp (swank::describe-symbol-for-emacs symbol)))
+  (remove-if-not 'symbolp (slynk::describe-symbol-for-emacs symbol)))
 
 (defun symbol-kind-p (symbol kind)
   (find kind (symbol-kinds symbol)))
@@ -106,7 +106,7 @@ Returns a list of alists of properties, one alist for each type of definition th
                  (alexandria:when-let ((symbol-properties (symbol-properties symbol)))
                    (push symbol-properties docs)))
                docs)))
-     (cons :source (swank/backend:find-source-location pck)))))
+     (cons :source (slynk/backend:find-source-location pck)))))
 
 ;; From docbrowser
 
@@ -121,10 +121,10 @@ Returns a list of alists of properties, one alist for each type of definition th
 will make documentation for slots in conditions work properly."
         (slot-value slotd 'sb-pcl::%documentation))
 
-;; SWANK CCL patch
+;; SLYNK CCL patch
 
 #+ccl
-(swank/ccl::defimplementation swank::describe-symbol-for-emacs (symbol)
+(slynk/ccl::defimplementation slynk::describe-symbol-for-emacs (symbol)
   (let ((result '()))
     (flet ((doc (kind &optional (sym symbol))
              (or (documentation sym kind) :not-documented))
@@ -150,24 +150,24 @@ will make documentation for slots in conditions work properly."
                (doc 'type)))
       result)))
 
-;; Some Swank backends support getting the source location of a SYMBOL, and others not. 
+;; Some Slynk backends support getting the source location of a SYMBOL, and others not. 
 #-sbcl
 (defun variable-source-location (name)
-  (swank/backend:find-source-location name))
+  (slynk/backend:find-source-location name))
 
 #+sbcl
 (defun variable-source-location (name)
   (alexandria:when-let ((definition-source (first (sb-introspect:find-definition-sources-by-name name :variable))))
-    (swank/sbcl::definition-source-for-emacs definition-source :variable name)))
+    (slynk/sbcl::definition-source-for-emacs definition-source :variable name)))
 
 #-sbcl
 (defun macro-source-location (name)
-  (swank/backend:find-source-location name))
+  (slynk/backend:find-source-location name))
 
 #+sbcl
 (defun macro-source-location (name)
   (alexandria:when-let ((definition-source (first (sb-introspect:find-definition-sources-by-name name :macro))))
-    (swank/sbcl::definition-source-for-emacs definition-source :macro name)))
+    (slynk/sbcl::definition-source-for-emacs definition-source :macro name)))
 
 (defun assoc-cdr (key data &key error-p)
   "Return (CDR (ASSOC KEY DATA)). If ERROR-P is non-NIL, signal an error if KEY is
@@ -206,10 +206,10 @@ not available is DATA."
                           (*print-pretty* nil)
                           (*package* (symbol-package symbol)))
                       #+nil(format nil "~{~a~^ ~}"
-                                   (mapcar #'format-argument-to-string (swank-backend:arglist symbol))
+                                   (mapcar #'format-argument-to-string (slynk-backend:arglist symbol))
                                    )
-                      (prin1-to-string (swank-backend:arglist symbol))))
-        (cons :arglist (swank::arglist symbol))
+                      (prin1-to-string (slynk-backend:arglist symbol))))
+        (cons :arglist (slynk::arglist symbol))
         (cons :package (symbol-package symbol))
         (cons :type :macro)
         (cons :source (macro-source-location symbol))))
@@ -228,15 +228,15 @@ not available is DATA."
                           (*print-pretty* nil)
                           (*package* (symbol-package symbol)))
                       #+nil(format nil "~{~a~^ ~}"
-                                   (mapcar #'format-argument-to-string (swank-backend:arglist symbol))
+                                   (mapcar #'format-argument-to-string (slynk-backend:arglist symbol))
                                    )
-                      (prin1-to-string (swank-backend:arglist symbol))))
-        (cons :arglist (swank::arglist symbol))
+                      (prin1-to-string (slynk-backend:arglist symbol))))
+        (cons :arglist (slynk::arglist symbol))
         (cons :package (symbol-package symbol))
         (cons :type (cond ((macro-function symbol) :macro)
                           ((typep (symbol-function symbol) 'generic-function) :generic-function)
                           (t :function)))
-        (cons :source (swank/backend:find-source-location (symbol-function symbol)))))
+        (cons :source (slynk/backend:find-source-location (symbol-function symbol)))))
 
 (defun generic-function-properties (symbol &optional shallow)
   (assert (typep (symbol-function symbol) 'generic-function))
@@ -246,13 +246,13 @@ not available is DATA."
                           (*print-pretty* nil)
                           (*package* (symbol-package symbol)))
                       #+nil(format nil "~{~a~^ ~}"
-                                   (mapcar #'format-argument-to-string (swank-backend:arglist symbol))
+                                   (mapcar #'format-argument-to-string (slynk-backend:arglist symbol))
                                    )
-                      (prin1-to-string (swank-backend:arglist symbol))))
-        (cons :arglist (swank::arglist symbol))
+                      (prin1-to-string (slynk-backend:arglist symbol))))
+        (cons :arglist (slynk::arglist symbol))
         (cons :package (symbol-package symbol))
         (cons :type :generic-function)
-	(cons :source (swank/backend:find-source-location (symbol-function symbol)))
+	(cons :source (slynk/backend:find-source-location (symbol-function symbol)))
         (unless shallow
           (cons :methods (closer-mop:generic-function-methods (symbol-function symbol))))))
 
@@ -265,7 +265,7 @@ not available is DATA."
         (cons :package (symbol-package symbol))
         (cons :type :variable)
         ;; TODO: fix me
-        ;;(cons :source (swank/backend:find-source-location symbol))
+        ;;(cons :source (slynk/backend:find-source-location symbol))
         (cons :source (ignore-errors (variable-source-location symbol)))
         ))
 
@@ -308,15 +308,15 @@ the CADR of the list."
 (defun specialisation-properties (class-name &key include-internal)
   (let* ((ignored '(initialize-instance))
          (class (if (symbolp class-name) (find-class class-name) class-name))
-         (spec (swank-backend:who-specializes class)))
+         (spec (slynk-backend:who-specializes class)))
     (unless (eq spec :not-implemented)
       (sort (loop
-              for v in spec
-              for symbol = (specialise->symbol v)
-              when (and (not (member symbol ignored))
-                        (or include-internal
-                            (symbol-external-p symbol (symbol-package (class-name class)))))
-                collect (list (cons :name symbol) (cons :documentation (documentation symbol 'function))))
+             for v in spec
+             for symbol = (specialise->symbol v)
+             when (and (not (member symbol ignored))
+                       (or include-internal
+                           (symbol-external-p symbol (symbol-package (class-name class)))))
+             collect (list (cons :name symbol) (cons :documentation (documentation symbol 'function))))
             #'string< :key (alexandria:compose #'princ-to-string #'assoc-name)))))
 
 (defun %ensure-external (symbol)
@@ -327,7 +327,7 @@ the CADR of the list."
                     (t
                      (warn "Unknown type: ~s. Expected symbol or SETF form." symbol)
                      nil))))
-    (when (swank::symbol-external-p name)
+    (when (slynk::symbol-external-p name)
       symbol)))
 
 (defun accessor-properties (class slot)
@@ -372,16 +372,16 @@ the CADR of the list."
 (defun load-slots (class)
   (closer-mop:ensure-finalized class)
   (flet ((load-slot (slot)
-           (list (cons :name (string (closer-mop:slot-definition-name slot)))
-                 (cons :documentation (swank-mop:slot-definition-documentation slot))
-                 (when (swank-mop:slot-definition-documentation slot)
-                   (cons :parsed-documentation (parse-docstring (swank-mop:slot-definition-documentation slot) nil :package (symbol-package (class-name class)))))
-                 ;; The LIST call below is because the accessor lookup is wrapped
-                 ;; in a FOR statement in the template.
-                 (cons :accessors (let ((accessor-list (accessor-properties class slot)))
-                                    (when accessor-list
-                                      (list accessor-list)))))))
-    (mapcar #'load-slot (closer-mop:class-slots class))))
+		    (list (cons :name (string (closer-mop:slot-definition-name slot)))
+			  (cons :documentation (slynk-mop:slot-definition-documentation slot))
+			  (when (slynk-mop:slot-definition-documentation slot)
+			    (cons :parsed-documentation (parse-docstring (slynk-mop:slot-definition-documentation slot) nil :package (symbol-package (class-name class)))))
+			  ;; The LIST call below is because the accessor lookup is wrapped
+			  ;; in a FOR statement in the template.
+			  (cons :accessors (let ((accessor-list (accessor-properties class slot)))
+					     (when accessor-list
+					       (list accessor-list)))))))
+	(mapcar #'load-slot (closer-mop:class-slots class))))
 
 (defun class-properties (class-name &optional shallow)
   (let ((cl (find-class class-name)))
@@ -392,7 +392,7 @@ the CADR of the list."
           (unless shallow (cons :class-precedence-list (mapcar 'class-name (find-superclasses cl))))
           (unless shallow (cons :direct-superclasses (mapcar 'class-name (closer-mop:class-direct-superclasses cl))))
           (unless shallow (cons :direct-subclasses (mapcar 'class-name (closer-mop:class-direct-subclasses cl))))
-          (cons :source (swank/backend:find-source-location cl))
+          (cons :source (slynk/backend:find-source-location cl))
           (cons :package (symbol-package class-name))
           (cons :type :class))))
 
@@ -578,7 +578,7 @@ PACKAGE: the package to use to read the docstring symbols.
 (defun package-source-location (package)
   (or (gethash package *package-source-locations*)
       (setf (gethash package *package-source-locations*)
-            (swank/backend:find-source-location package))))
+            (slynk/backend:find-source-location package))))
 
 ;; This function finds the packages defined from an ASDF, approximatly. And it is very slow.
 (defun asdf-system-packages (system)

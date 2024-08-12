@@ -106,7 +106,7 @@ Returns a list of alists of properties, one alist for each type of definition th
                  (alexandria:when-let ((symbol-properties (symbol-properties symbol)))
                    (push symbol-properties docs)))
                docs)))
-     (cons :source (slynk/backend:find-source-location pck)))))
+     (cons :source (slynk-backend:find-source-location pck)))))
 
 ;; From docbrowser
 
@@ -158,7 +158,7 @@ will make documentation for slots in conditions work properly."
 #+sbcl
 (defun variable-source-location (name)
   (alexandria:when-let ((definition-source (first (sb-introspect:find-definition-sources-by-name name :variable))))
-    (slynk/sbcl::definition-source-for-emacs definition-source :variable name)))
+    (slynk-sbcl::definition-source-for-emacs definition-source :variable name)))
 
 #-sbcl
 (defun macro-source-location (name)
@@ -167,7 +167,7 @@ will make documentation for slots in conditions work properly."
 #+sbcl
 (defun macro-source-location (name)
   (alexandria:when-let ((definition-source (first (sb-introspect:find-definition-sources-by-name name :macro))))
-    (slynk/sbcl::definition-source-for-emacs definition-source :macro name)))
+    (slynk-sbcl::definition-source-for-emacs definition-source :macro name)))
 
 (defun assoc-cdr (key data &key error-p)
   "Return (CDR (ASSOC KEY DATA)). If ERROR-P is non-NIL, signal an error if KEY is
@@ -236,7 +236,7 @@ not available is DATA."
         (cons :type (cond ((macro-function symbol) :macro)
                           ((typep (symbol-function symbol) 'generic-function) :generic-function)
                           (t :function)))
-        (cons :source (slynk/backend:find-source-location (symbol-function symbol)))))
+        (cons :source (slynk-backend:find-source-location (symbol-function symbol)))))
 
 (defun generic-function-properties (symbol &optional shallow)
   (assert (typep (symbol-function symbol) 'generic-function))
@@ -252,7 +252,7 @@ not available is DATA."
         (cons :arglist (slynk::arglist symbol))
         (cons :package (symbol-package symbol))
         (cons :type :generic-function)
-	(cons :source (slynk/backend:find-source-location (symbol-function symbol)))
+	(cons :source (slynk-backend:find-source-location (symbol-function symbol)))
         (unless shallow
           (cons :methods (closer-mop:generic-function-methods (symbol-function symbol))))))
 
@@ -265,7 +265,7 @@ not available is DATA."
         (cons :package (symbol-package symbol))
         (cons :type :variable)
         ;; TODO: fix me
-        ;;(cons :source (slynk/backend:find-source-location symbol))
+        ;;(cons :source (slynk-backend:find-source-location symbol))
         (cons :source (ignore-errors (variable-source-location symbol)))
         ))
 
@@ -392,7 +392,7 @@ the CADR of the list."
           (unless shallow (cons :class-precedence-list (mapcar 'class-name (find-superclasses cl))))
           (unless shallow (cons :direct-superclasses (mapcar 'class-name (closer-mop:class-direct-superclasses cl))))
           (unless shallow (cons :direct-subclasses (mapcar 'class-name (closer-mop:class-direct-subclasses cl))))
-          (cons :source (slynk/backend:find-source-location cl))
+          (cons :source (slynk-backend:find-source-location cl))
           (cons :package (symbol-package class-name))
           (cons :type :class))))
 
@@ -578,7 +578,7 @@ PACKAGE: the package to use to read the docstring symbols.
 (defun package-source-location (package)
   (or (gethash package *package-source-locations*)
       (setf (gethash package *package-source-locations*)
-            (slynk/backend:find-source-location package))))
+            (slynk-backend:find-source-location package))))
 
 ;; This function finds the packages defined from an ASDF, approximatly. And it is very slow.
 (defun asdf-system-packages (system)
